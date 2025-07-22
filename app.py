@@ -201,8 +201,7 @@ st.title("Talk to a Friendly Chatbot 💬")
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-user_input = st.text_input("You 👤:")
-
+user_input = st.text_input("You 👤:", key="user_input")
 if user_input:
     emotion = get_emotion(user_input)
     valence, arousal = emotion_valence_arousal.get(emotion, (0, 0))
