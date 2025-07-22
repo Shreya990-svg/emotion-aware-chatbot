@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# Securely configure Gemini API key from Streamlit secrets
+# Configure Gemini API key securely (using Streamlit secrets)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Emotion mapping using valence-arousal model
+# Emotion mapping with valence and arousal values
 emotion_valence_arousal = {
     "joy": (0.9, 0.7),
     "anger": (-0.8, 0.8),
@@ -17,7 +17,7 @@ emotion_valence_arousal = {
     "neutral": (0.0, 0.0)
 }
 
-# Enhanced emotion detection
+# Detect basic emotion from text
 def get_emotion(text):
     text = text.lower()
     if any(word in text for word in ["happy", "glad", "joy", "smile", "excited"]): return "joy"
@@ -26,58 +26,56 @@ def get_emotion(text):
     if any(word in text for word in ["scared", "afraid", "nervous", "anxious"]): return "fear"
     if any(word in text for word in ["surprised", "shocked", "wow"]): return "surprise"
     if any(word in text for word in ["disgusted", "gross", "nasty"]): return "disgust"
-    if any(word in text for word in ["stress", "tense", "tired", "burned out"]): return "stress"
+    if any(word in text for word in ["stress", "tired", "tense", "burned out"]): return "stress"
     return "neutral"
 
-# Gemini-powered empathetic reply
+# Generate friendly emotionally aware response
 def friendly_reply(history, user_text, emotion_label):
-    convo = "\n".join([f"You: {msg['user']}\nBot: {msg['bot']}" for msg in history])
+    convo = "\n".join([f"You: {msg['user']}\nFriend: {msg['bot']}" for msg in history])
     prompt = f"""
-You're a warm, caring chatbot friend. The user is feeling '{emotion_label}'.
+You're a kind, emotionally intelligent friend. The user is feeling '{emotion_label}'.
 
-Your tone:
-- Uplifting and casual
-- Comforting and kind
-- Speak like a best friend trying to help
+Tone:
+- Friendly and natural
+- Supportive, comforting
+- Keep it to just 1–2 lines max
+- Make them feel better, not robotic
 
-Respond to what the user just said in 1–2 lines (no long paragraphs).
-
-Conversation:
+Chat history:
 {convo}
 You: {user_text}
-Bot:"""
+Friend:"""
     model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
     response = model.generate_content(prompt)
     return response.text.strip()
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Emotion Chatbot", page_icon="💬")
-st.markdown("<h1 style='color:#4b8bbe;'>💬 Chat with Your Friendly Bot</h1>", unsafe_allow_html=True)
+# --- Streamlit App ---
+st.set_page_config(page_title="Friendly Chat", page_icon="💬")
+st.markdown("<h1 style='color:#4b8bbe;'>💬 Chat with Your Emotional Buddy</h1>", unsafe_allow_html=True)
 
-# Initialize chat history
+# Session state for conversation
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Text input
+# Input box
 user_input = st.text_input("You 👤:", key="user_input_field")
 
+# On message sent
 if user_input:
     emotion = get_emotion(user_input)
-    valence, arousal = emotion_valence_arousal.get(emotion, (0.0, 0.0))
+    valence, arousal = emotion_valence_arousal.get(emotion, (0.0, 0.0))  # used internally
     bot_response = friendly_reply(st.session_state.chat_history, user_input, emotion)
 
-    # Update chat memory
     st.session_state.chat_history.append({
         "user": user_input,
         "bot": bot_response,
-        "emotion": emotion,
+        "emotion": emotion,  # still stored if needed later
         "valence": valence,
         "arousal": arousal
     })
 
-# Show entire chat log
+# Display conversation only (no emotion stats shown)
 for msg in st.session_state.chat_history:
     st.markdown(f"**👤 You:** {msg['user']}")
-    st.markdown(f"**🤖 Bot:** {msg['bot']}")
-    st.caption(f"_Emotion: {msg['emotion']} → Valence: {msg['valence']}, Arousal: {msg['arousal']}_")
+    st.markdown(f"**💬 {msg['bot']}**")
     st.markdown("---")
