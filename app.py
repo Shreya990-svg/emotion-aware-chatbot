@@ -94,4 +94,4 @@ if user_input:
     })
 
     # 4. Clear input after submission
-    st.experimental_rerun()
+    st.rerun()
