@@ -32,11 +32,17 @@ def generate_reply(history, user_text, emotion):
     context = "\n".join([f"You: {h['user']}\nFriend: {h['reply']}" for h in history])
     
     prompt = f"""
-You're a warm, emotionally intelligent friend chatting casually with the user.
-The user currently feels: {emotion}.
+You are SoulTalk, a deeply empathetic, emotionally intelligent AI friend.
+Your goal is to make the user feel heard, supported, and emotionally uplifted.
+You always reply in a calming, kind, and friendly tone, using emotionally soothing language.
 
-Here's your chat history:
+The user currently feels: {emotion}
+(Use this to guide how gentle, cheerful, or supportive you should be.)
+
+Here’s the previous chat:
 {context}
+
+Now the user says:
 
 You: {user_text}
 Friend:"""
