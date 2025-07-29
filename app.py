@@ -1,11 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
-import os
 
-# Configure Gemini API key from Streamlit Secrets
+# --- Configure Gemini API Key ---
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-# Valence-arousal mapping for internal use
+# --- Emotion Valence-Arousal Mapping ---
 emotion_valence_arousal = {
     "joy": (0.9, 0.7),
     "anger": (-0.8, 0.8),
@@ -16,7 +15,7 @@ emotion_valence_arousal = {
     "neutral": (0.0, 0.0)
 }
 
-# Basic keyword-based emotion detection
+# --- Basic Emotion Detection ---
 def get_emotion(text):
     text = text.lower()
     if any(word in text for word in ["happy", "glad", "joy", "smile", "excited"]): return "joy"
@@ -27,7 +26,7 @@ def get_emotion(text):
     if any(word in text for word in ["disgusted", "gross", "nasty"]): return "disgust"
     return "neutral"
 
-# Generate reply using full conversation and emotion context
+# --- Generate Friendly Response ---
 def generate_reply(history, user_text, emotion):
     context = "\n".join([f"You: {h['user']}\nFriend: {h['reply']}" for h in history])
     
@@ -39,7 +38,7 @@ You always reply in a calming, kind, and friendly tone, using emotionally soothi
 The user currently feels: {emotion}
 (Use this to guide how gentle, cheerful, or supportive you should be.)
 
-Here’s the previous chat:
+Here's your chat history:
 {context}
 
 Now the user says:
@@ -51,26 +50,41 @@ Friend:"""
     response = model.generate_content(prompt)
     return response.text.strip()
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Emotion-Aware Chatbot 🤗", page_icon="💬")
-st.title("Talk to Your Emotion-Aware Chatbot 💬")
+# --- Streamlit UI Setup ---
+st.set_page_config(page_title="SoulTalk - Emotion-Aware Chatbot", page_icon="💬")
+st.title("🧠 SoulTalk: Your Emotion-Aware Friend 🤗")
 
-# Session state for history
+# --- Initialize Session State ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Input field (unique key avoids duplication errors)
-user_input = st.text_input("You 👤:", key="user_input_field")
+# --- Display Chat History (Styled like ChatGPT) ---
+st.markdown("## 💬 Conversation")
+for msg in st.session_state.chat_history:
+    with st.container():
+        st.markdown(
+            f"<div style='background-color:#f0f2f6; padding:10px; border-radius:10px;'><b>👤 You:</b> {msg['user']}</div>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f"<div style='background-color:#d0f0c0; padding:10px; border-radius:10px; margin-top:5px;'><b>🧠 SoulTalk:</b> {msg['reply']}</div>",
+            unsafe_allow_html=True
+        )
+        st.markdown("<hr>", unsafe_allow_html=True)
 
+# --- User Input Field ---
+user_input = st.text_input("Type your message here 👇", key="user_input_field")
+
+# --- Handle User Input ---
 if user_input:
-    # Step 1: Detect emotion
+    # 1. Emotion Detection
     emotion = get_emotion(user_input)
     valence, arousal = emotion_valence_arousal.get(emotion, (0.0, 0.0))
-    
-    # Step 2: Generate friend-style reply using full context
+
+    # 2. Generate Reply
     reply = generate_reply(st.session_state.chat_history, user_input, emotion)
-    
-    # Step 3: Append to chat history
+
+    # 3. Update History
     st.session_state.chat_history.append({
         "user": user_input,
         "reply": reply,
@@ -79,8 +93,5 @@ if user_input:
         "arousal": arousal
     })
 
-# --- Chat Display ---
-for msg in st.session_state.chat_history:
-    st.markdown(f"**👤 You:** {msg['user']}")
-    st.markdown(f"💬 {msg['reply']}")
-    st.markdown("---")
+    # 4. Clear input after submission
+    st.experimental_rerun()
