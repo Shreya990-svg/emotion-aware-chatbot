@@ -1,101 +1,84 @@
 import streamlit as st
 import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
-# Configure Gemini API key
+load_dotenv()
+
+# Configure Gemini
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-pro")
 
-# Emotion-to-valence/arousal mapping
-emotion_valence_arousal = {
-    "joy": (0.9, 0.7),
-    "anger": (-0.8, 0.8),
-    "sadness": (-0.9, -0.5),
-    "fear": (-0.7, 0.6),
-    "surprise": (0.2, 0.9),
-    "disgust": (-0.6, 0.3),
-    "neutral": (0.0, 0.0)
-}
+# --- Streamlit page config ---
+st.set_page_config(page_title="SoulTalk: Emotion-Aware Chatbot", layout="centered")
 
-# Simple emotion detection
-def get_emotion(text):
-    text = text.lower()
-    if any(w in text for w in ["happy", "glad", "joy", "smile", "excited"]): return "joy"
-    if any(w in text for w in ["sad", "cry", "upset", "down", "unhappy"]): return "sadness"
-    if any(w in text for w in ["angry", "mad", "furious", "annoyed"]): return "anger"
-    if any(w in text for w in ["scared", "afraid", "nervous", "anxious"]): return "fear"
-    if any(w in text for w in ["surprised", "wow", "unexpected"]): return "surprise"
-    if any(w in text for w in ["disgusted", "gross", "nasty"]): return "disgust"
-    return "neutral"
-
-# Generate emotionally-aware reply
-def generate_reply(history, user_text, emotion):
-    context = "\n".join([f"You: {h['user']}\nSoulTalk: {h['reply']}" for h in history])
-
-    prompt = f"""
-You are SoulTalk, an emotionally intelligent AI friend.
-Reply in a soothing, kind, and emotionally uplifting tone.
-User currently feels: {emotion}
-
-Chat so far:
-{context}
-
-User says:
-You: {user_text}
-SoulTalk:"""
-
-    model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
-    response = model.generate_content(prompt)
-    return response.text.strip()
-
-# -- Streamlit UI setup --
-st.set_page_config(page_title="🧠 SoulTalk", layout="centered")
-
+# --- Custom CSS for Dark Theme & Better Contrast ---
 st.markdown("""
     <style>
+        body {
+            background-color: #121212;
+            color: #f5f5f5;
+        }
         .chat-box {
-            background-color: #f9f9f9;
-            border-radius: 10px;
-            padding: 12px;
             margin-bottom: 10px;
         }
         .user-msg {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 10px;
+            background-color: #1e88e5;
+            color: white;
+            padding: 12px;
             border-radius: 10px;
+            margin-bottom: 8px;
         }
         .bot-msg {
-            background-color: #f1f8e9;
-            border-left: 4px solid #8bc34a;
-            padding: 10px;
+            background-color: #2e7d32;
+            color: white;
+            padding: 12px;
             border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .stTextInput > div > div > input {
+            color: white;
         }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("## 🧠 SoulTalk: Your Emotion-Aware Friend 🤗")
+# --- Title ---
+st.markdown("<h1 style='text-align: center;'>🧠 SoulTalk: Your Emotion-Aware Friend 🤗</h1>", unsafe_allow_html=True)
 
-# Initialize history
+# --- Session State ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# User input
-user_input = st.chat_input("Type your message here...")
+# --- Emotion-Aware Prompt Template ---
+system_prompt = """
+You are SoulTalk, a kind, emotionally supportive chatbot. 
+Your responses must feel like a comforting, empathetic conversation with a friend.
 
-# Process user message
+1. Detect the emotional tone of the user's message using valence and arousal.
+2. Respond without naming emotions directly (no emotion labels).
+3. Be supportive, understanding, and use calming or uplifting language.
+4. Avoid repeating the same phrases in every response.
+"""
+
+# --- Chat Input ---
+user_input = st.text_input("Type your message here 👇", key="input")
+
+# --- Process Input ---
 if user_input:
-    emotion = get_emotion(user_input)
-    valence, arousal = emotion_valence_arousal.get(emotion, (0.0, 0.0))
-    reply = generate_reply(st.session_state.chat_history, user_input, emotion)
+    # Append user message
+    st.session_state.chat_history.append(("You", user_input))
 
-    st.session_state.chat_history.append({
-        "user": user_input,
-        "reply": reply,
-        "emotion": emotion,
-        "valence": valence,
-        "arousal": arousal
-    })
+    # Generate response from Gemini
+    full_prompt = system_prompt + f"\nUser: {user_input}\nSoulTalk:"
+    response = model.generate_content(full_prompt)
+    bot_reply = response.text.strip()
 
-# Display conversation
-for msg in st.session_state.chat_history:
-    st.markdown(f"<div class='user-msg'><strong>You:</strong> {msg['user']}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='bot-msg'><strong>SoulTalk:</strong> {msg['reply']}</div>", unsafe_allow_html=True)
+    # Append bot reply
+    st.session_state.chat_history.append(("SoulTalk", bot_reply))
+
+# --- Display Chat ---
+for sender, message in st.session_state.chat_history:
+    if sender == "You":
+        st.markdown(f"<div class='user-msg'><strong>{sender}:</strong> {message}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<div class='bot-msg'><strong>{sender}:</strong> {message}</div>", unsafe_allow_html=True)
