@@ -26,19 +26,17 @@ def get_emotion(text):
     if any(w in text for w in ["disgusted", "gross", "nasty"]): return "disgust"
     return "neutral"
 
-# Generate emotionally-aware reply
+# Optimized reply generation (faster)
 def generate_reply(history, user_text, emotion):
-    context = "\n".join([f"You: {h['user']}\nSoulTalk: {h['reply']}" for h in history])
+    recent_history = history[-3:]  # Limit context to last 3 exchanges
+    context = "\n".join([f"You: {h['user']}\nSoulTalk: {h['reply']}" for h in recent_history])
 
     prompt = f"""
-You are SoulTalk, an emotionally intelligent AI friend.
-Reply in a soothing, kind, and emotionally uplifting tone.
-User currently feels: {emotion}
+You are SoulTalk, an emotionally supportive AI.
+The user feels {emotion}. Keep your reply short, friendly, and uplifting.
 
-Chat so far:
+Chat:
 {context}
-
-User says:
 You: {user_text}
 SoulTalk:"""
 
@@ -49,7 +47,7 @@ SoulTalk:"""
 # -- Streamlit UI setup --
 st.set_page_config(page_title="🧠 SoulTalk", layout="centered")
 
-# Improved dark theme colors
+# Dark theme styling
 st.markdown("""
     <style>
         body {
@@ -95,7 +93,7 @@ if "chat_history" not in st.session_state:
 # User input
 user_input = st.chat_input("Type your message here...")
 
-# Process message
+# Handle message input
 if user_input:
     emotion = get_emotion(user_input)
     valence, arousal = emotion_valence_arousal.get(emotion, (0.0, 0.0))
@@ -109,7 +107,7 @@ if user_input:
         "arousal": arousal
     })
 
-# Show chat
+# Display messages
 for msg in st.session_state.chat_history:
     st.markdown(f"<div class='user-msg'><strong>You:</strong> {msg['user']}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='bot-msg'><strong>SoulTalk:</strong> {msg['reply']}</div>", unsafe_allow_html=True)
